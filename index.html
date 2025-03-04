@@ -1,87 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PeerJS Chat with QR Code</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.3.1/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        #chat { max-width: 400px; margin: auto; border: 1px solid #ccc; padding: 10px; display: none; }
-        #messages { height: 200px; overflow-y: auto; border-bottom: 1px solid #ccc; margin-bottom: 10px; }
-        input, button { padding: 8px; margin: 5px; width: 90%; }
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+      }
+      #chat {
+        max-width: 400px;
+        margin: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        display: none;
+      }
+      #messages {
+        height: 200px;
+        overflow-y: auto;
+        border-bottom: 1px solid #ccc;
+        margin-bottom: 10px;
+      }
+      input,
+      button {
+        padding: 8px;
+        margin: 5px;
+        width: 90%;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h2>PeerJS Messaging App with QR Code</h2>
     <p>Your Peer ID: <strong id="peer-id">...</strong></p>
     <div id="qrcode"></div>
-    <input type="text" id="remote-id" placeholder="Enter or scan friend's Peer ID">
+    <input
+      type="text"
+      id="remote-id"
+      placeholder="Enter or scan friend's Peer ID"
+    />
     <button onclick="connectToPeer()">Connect</button>
-    
-    <div id="reader" style="width: 300px; margin: auto;"></div>
+
+    <div id="reader" style="width: 300px; margin: auto"></div>
     <button onclick="startQRScanner()">Scan QR Code</button>
-    
+
     <div id="chat">
-        <div id="messages"></div>
-        <input type="text" id="message" placeholder="Type a message">
-        <button onclick="sendMessage()">Send</button>
+      <div id="messages"></div>
+      <input type="text" id="message" placeholder="Type a message" />
+      <button onclick="sendMessage()">Send</button>
     </div>
 
     <script>
-        const peer = new Peer();
-        let conn;
-        
-        peer.on('open', id => {
-            document.getElementById('peer-id').innerText = id;
-            new QRCode(document.getElementById("qrcode"), id);
+      const peer = new Peer();
+      let conn;
+
+      peer.on("open", (id) => {
+        document.getElementById("peer-id").innerText = id;
+        new QRCode(document.getElementById("qrcode"), id);
+      });
+
+      peer.on("connection", (connection) => {
+        conn = connection;
+        setupConnection();
+      });
+
+      function connectToPeer() {
+        const remoteId = document.getElementById("remote-id").value;
+        conn = peer.connect(remoteId);
+        conn.on("open", setupConnection);
+      }
+
+      function setupConnection() {
+        document.getElementById("chat").style.display = "block";
+        conn.on("data", (data) => {
+          displayMessage(`Friend: ${data}`);
         });
+      }
 
-        peer.on('connection', connection => {
-            conn = connection;
-            setupConnection();
-        });
+      function sendMessage() {
+        const message = document.getElementById("message").value;
+        conn.send(message);
+        displayMessage(`You: ${message}`);
+        document.getElementById("message").value = "";
+      }
 
-        function connectToPeer() {
-            const remoteId = document.getElementById('remote-id').value;
-            conn = peer.connect(remoteId);
-            conn.on('open', setupConnection);
-        }
+      function displayMessage(msg) {
+        const messagesDiv = document.getElementById("messages");
+        messagesDiv.innerHTML += `<p>${msg}</p>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
 
-        function setupConnection() {
-            document.getElementById('chat').style.display = 'block';
-            conn.on('data', data => {
-                displayMessage(`Friend: ${data}`);
-            });
-        }
-
-        function sendMessage() {
-            const message = document.getElementById('message').value;
-            conn.send(message);
-            displayMessage(`You: ${message}`);
-            document.getElementById('message').value = '';
-        }
-
-        function displayMessage(msg) {
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML += `<p>${msg}</p>`;
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function startQRScanner() {
-            const html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                qrCodeMessage => {
-                    document.getElementById('remote-id').value = qrCodeMessage;
-                    html5QrCode.stop();
-                },
-                errorMessage => {}
-            ).catch(err => console.error(err));
-        }
+      function startQRScanner() {
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCode
+          .start(
+            { facingMode: "environment" }, // Use back camera if available
+            { fps: 10, qrbox: 250 },
+            (qrCodeMessage) => {
+              document.getElementById("remote-id").value = qrCodeMessage;
+              html5QrCode.stop(); // Stop scanner after successful scan
+            },
+            (errorMessage) => {
+              console.error(errorMessage); // Log errors (optional)
+            }
+          )
+          .catch((err) => console.error(err));
+      }
     </script>
-</body>
+  </body>
 </html>
